@@ -1,8 +1,9 @@
 'use client';
-import type { NextPage } from 'next';
-import VoiceSocialApp from '@/components/VoiceSocialApp';
 
-const Home: NextPage = () => {
+import { NextPage } from 'next';
+import VoiceSocialApp from '../components/VoiceSocialApp';
+
+const Page: NextPage = () => {
   return (
     <main className="min-h-screen p-4">
       <VoiceSocialApp />
@@ -10,4 +11,4 @@ const Home: NextPage = () => {
   );
 };
 
-export default Home;
+export default Page;
