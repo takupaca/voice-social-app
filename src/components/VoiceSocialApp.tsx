@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { TrashIcon } from 'lucide-react';
 
 interface Post {
   id: number;
@@ -96,6 +97,12 @@ const VoiceSocialApp: React.FC = () => {
     }
   };
 
+  const handleDelete = (postId: number) => {
+    if (window.confirm('この投稿を削除してもよろしいですか？')) {
+      setPosts(posts.filter(post => post.id !== postId));
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto p-4 bg-gray-50">
       <div className="mb-6 sticky top-0 bg-white p-4 shadow-md rounded-lg border border-gray-200">
@@ -128,8 +135,19 @@ const VoiceSocialApp: React.FC = () => {
       <div className="space-y-4">
         {posts.map((post) => (
           <div key={post.id} className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-            <p className="text-gray-600 text-sm mb-2">{post.timestamp}</p>
-            <p className="text-gray-800">{post.content}</p>
+            <div className="flex justify-between items-start">
+              <div className="flex-grow">
+                <p className="text-gray-600 text-sm mb-2">{post.timestamp}</p>
+                <p className="text-gray-800">{post.content}</p>
+              </div>
+              <button
+                onClick={() => handleDelete(post.id)}
+                className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors"
+                title="削除"
+              >
+                <TrashIcon size={18} />
+              </button>
+            </div>
           </div>
         ))}
       </div>
