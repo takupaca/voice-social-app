@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { TrashIcon } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+
+// Supabaseクライアントの初期化
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface Post {
-  id: number;
+  id: string;
   content: string;
-  timestamp: string;
+  created_at: string;
 }
 
 interface SpeechRecognitionEvent extends Event {
@@ -44,12 +51,15 @@ declare global {
 }
 
 const VoiceSocialApp: React.FC = () => {
-  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [currentTranscript, setCurrentTranscript] = useState<string>('');
+  const [currentTranscript, setCurrentTranscript] = useState('');
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
 
   useEffect(() => {
+    fetchPosts();
+
     if ('webkitSpeechRecognition' in window) {
       const recognition = new window.webkitSpeechRecognition();
       recognition.continuous = true;
@@ -73,6 +83,22 @@ const VoiceSocialApp: React.FC = () => {
     }
   }, []);
 
+  const fetchPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const toggleRecording = () => {
     if (isRecording) {
       recognition?.stop();
@@ -83,25 +109,54 @@ const VoiceSocialApp: React.FC = () => {
     setIsRecording(!isRecording);
   };
 
-  const handlePost = () => {
+  const handlePost = async () => {
     if (currentTranscript.trim()) {
-      const newPost: Post = {
-        id: Date.now(),
-        content: currentTranscript,
-        timestamp: new Date().toLocaleString(),
-      };
-      setPosts([newPost, ...posts]);
-      setCurrentTranscript('');
-      recognition?.stop();
-      setIsRecording(false);
+      try {
+        const { data, error } = await supabase
+          .from('posts')
+          .insert([
+            {
+              content: currentTranscript,
+              created_at: new Date().toISOString(),
+            }
+          ])
+          .select();
+
+        if (error) throw error;
+        if (data) {
+          setPosts([data[0], ...posts]);
+        }
+
+        setCurrentTranscript('');
+        recognition?.stop();
+        setIsRecording(false);
+      } catch (error) {
+        console.error('Error saving post:', error);
+        alert('投稿の保存に失敗しました。');
+      }
     }
   };
 
-  const handleDelete = (postId: number) => {
+  const handleDelete = async (postId: number) => {
     if (window.confirm('この投稿を削除してもよろしいですか？')) {
-      setPosts(posts.filter(post => post.id !== postId));
+      try {
+        const { error } = await supabase
+          .from('posts')
+          .delete()
+          .eq('id', postId);
+
+        if (error) throw error;
+        setPosts(posts.filter(post => post.id !== postId));
+      } catch (error) {
+        console.error('Error deleting post:', error);
+        alert('投稿の削除に失敗しました。');
+      }
     }
   };
+
+  if (isLoading) {
+    return <div className="max-w-2xl mx-auto p-4">Loading...</div>;
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-4 bg-gray-50">
@@ -137,7 +192,7 @@ const VoiceSocialApp: React.FC = () => {
           <div key={post.id} className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
             <div className="flex justify-between items-start">
               <div className="flex-grow">
-                <p className="text-gray-600 text-sm mb-2">{post.timestamp}</p>
+                <p className="text-gray-600 text-sm mb-2">{new Date(post.created_at).toLocaleString()}</p>
                 <p className="text-gray-800">{post.content}</p>
               </div>
               <button
