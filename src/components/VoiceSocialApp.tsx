@@ -137,7 +137,7 @@ const VoiceSocialApp: React.FC = () => {
     }
   };
 
-  const handleDelete = async (postId: number) => {
+  const handleDelete = async (postId: string) => {
     if (window.confirm('この投稿を削除してもよろしいですか？')) {
       try {
         const { error } = await supabase
