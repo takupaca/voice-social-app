@@ -1,4 +1,4 @@
-// src/app/api/voice-upload/route.ts
+// src/app/api/voice-upload/route.ts の修正版
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { SpeechClient } from '@google-cloud/speech';
@@ -18,6 +18,31 @@ const supabase = createClient(
 const speechClient = new SpeechClient({
   credentials: googleCredentials
 });
+
+// エラー型の定義
+interface ErrorWithMessage {
+  message: string;
+}
+
+function isErrorWithMessage(error: unknown): error is ErrorWithMessage {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as Record<string, unknown>).message === 'string'
+  );
+}
+
+function toErrorWithMessage(error: unknown): ErrorWithMessage {
+  if (isErrorWithMessage(error)) return error;
+  
+  try {
+    return new Error(JSON.stringify(error));
+  } catch {
+    // fallback in case there's an error stringifying the error
+    return new Error(String(error));
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,10 +90,11 @@ export async function POST(request: NextRequest) {
       post: data?.[0] 
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error processing audio:', error);
+    const errorWithMessage = toErrorWithMessage(error);
     return NextResponse.json({ 
-      error: error.message || '音声処理中にエラーが発生しました' 
+      error: errorWithMessage.message || '音声処理中にエラーが発生しました' 
     }, { status: 500 });
   }
 }
